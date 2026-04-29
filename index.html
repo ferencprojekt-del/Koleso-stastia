@@ -6,40 +6,19 @@
 <style>
 body {
     font-family: Arial, sans-serif;
+    background: #f4f4f4;
     display: flex;
     justify-content: center;
-    align-items: center;
-    height: 100vh;
-    background: #f4f4f4;
+    padding: 40px;
 }
 .container {
     display: flex;
     gap: 40px;
+    align-items: flex-start;
 }
-#wheel {
-    width: 400px;
-    height: 400px;
-    border-radius: 50%;
-    border: 10px solid #333;
-    position: relative;
-    overflow: hidden;
-    transition: transform 5s cubic-bezier(.17,.67,.12,.99);
-}
-.segment {
-    position: absolute;
-    width: 50%;
-    height: 50%;
-    left: 50%;
-    top: 50%;
-    transform-origin: 0% 0%;
-    background: #ddd;
-    border: 1px solid #999;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 13px;
-    text-align: center;
-    padding: 5px;
+#wheelCanvas {
+    width: 420px;
+    height: 420px;
 }
 #pointer {
     width: 0;
@@ -47,9 +26,9 @@ body {
     border-left: 25px solid transparent;
     border-right: 25px solid transparent;
     border-bottom: 40px solid red;
-    position: absolute;
-    top: -40px;
-    left: 175px;
+    position: relative;
+    left: 180px;
+    top: -10px;
 }
 .form-box {
     width: 300px;
@@ -75,15 +54,19 @@ button {
 button:hover {
     background: #27ae60;
 }
+#result {
+    font-weight: bold;
+    margin-top: 15px;
+}
 </style>
 </head>
 <body>
 
 <div class="container">
 
-    <div style="position:relative;">
+    <div>
         <div id="pointer"></div>
-        <div id="wheel"></div>
+        <canvas id="wheelCanvas" width="420" height="420"></canvas>
     </div>
 
     <div class="form-box">
@@ -99,54 +82,94 @@ button:hover {
 
         <button onclick="spinWheel()">ROZTOČ KOLESO!</button>
 
-        <p id="result" style="font-weight:bold; margin-top:15px;"></p>
+        <p id="result"></p>
     </div>
 
 </div>
 
 <script>
-// TEXTY SEGMENTOV
+// TEXTY SEGMENTOV Z OBRÁZKA
 const segments = [
     "Mrzí ma to",
     "Dnes to nevyšlo",
     "Temer! Ešte raz skúste",
     "Veľký balík čistiacich prostriedkov",
     "Radosť zo záradenia",
-    "Lesseau mydlá",
-    "Cify",
-    "Vzorka TAP! DEO",
-    "Úsmev na tvári",
-    "To je škoda!",
-    "Čistý deň s penou"
+    "Lesso! Vyhrali ste malú odmenu",
+    "Vyzerá fajn! Tlap! DEO",
+    "TO je škoda!",
+    "Úžasná malá odmena",
+    "Čisté prekvapenie"
 ];
+
+// TVOJE VÝHERNÉ NÁZVY
+const prizeMapping = {
+    "Veľký balík čistiacich prostriedkov": "Veľký balíček chémie",
+    "Lesso! Vyhrali ste malú odmenu": "Lesseau mydlá",
+    "Úžasná malá odmena": "Cify",
+    "Vyzerá fajn! Tlap! DEO": "Vzorka Tapi Deo"
+};
 
 // LIMITY VÝHIER
 let limits = {
-    "Veľký balík čistiacich prostriedkov": 1,
+    "Veľký balíček chémie": 1,
     "Lesseau mydlá": 1,
     "Cify": 6,
-    "Vzorka TAP! DEO": 40
+    "Vzorka Tapi Deo": 40
 };
 
-// VYKRESLENIE KOLESA
-const wheel = document.getElementById("wheel");
-const segAngle = 360 / segments.length;
+// FARBY SEGMENTOV – sampling z obrázka
+const colors = [
+    "#4A90E2", // modrá
+    "#7ED321", // zelená
+    "#F8E71C", // žltá
+    "#F5A623", // oranžová
+    "#D0021B", // červená
+    "#9013FE", // fialová
+    "#50E3C2", // tyrkysová
+    "#FF6EC7", // ružová
+    "#B8E986", // svetlozelená
+    "#4A4DE2"  // tmavomodrá
+];
 
-segments.forEach((text, i) => {
-    const div = document.createElement("div");
-    div.className = "segment";
-    div.style.transform = `rotate(${i * segAngle}deg) skewY(${90 - segAngle}deg)`;
-    div.style.background = `hsl(${i * 30}, 80%, 70%)`;
-    div.innerHTML = text;
-    wheel.appendChild(div);
-});
+// CANVAS KOLESO
+const canvas = document.getElementById("wheelCanvas");
+const ctx = canvas.getContext("2d");
+const radius = canvas.width / 2;
+const segAngle = 2 * Math.PI / segments.length;
+
+function drawWheel() {
+    for (let i = 0; i < segments.length; i++) {
+        const start = i * segAngle;
+        const end = start + segAngle;
+
+        ctx.beginPath();
+        ctx.moveTo(radius, radius);
+        ctx.arc(radius, radius, radius, start, end);
+        ctx.fillStyle = colors[i];
+        ctx.fill();
+        ctx.stroke();
+
+        // TEXT
+        ctx.save();
+        ctx.translate(radius, radius);
+        ctx.rotate(start + segAngle / 2);
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#000";
+        ctx.font = "16px Arial";
+        ctx.fillText(segments[i], radius - 10, 5);
+        ctx.restore();
+    }
+}
+
+drawWheel();
 
 let spinning = false;
+let rotation = 0;
 
 function spinWheel() {
     if (spinning) return;
 
-    // FORM VALIDÁCIA
     if (!name.value || !email.value || !phone.value) {
         alert("Vyplňte všetky údaje");
         return;
@@ -155,8 +178,6 @@ function spinWheel() {
         alert("Musíte súhlasiť so spracovaním údajov");
         return;
     }
-
-    // JEDEN POKUS NA HRÁČA
     if (localStorage.getItem("played")) {
         alert("Už ste hrali");
         return;
@@ -164,30 +185,44 @@ function spinWheel() {
 
     spinning = true;
 
-    const randomSpin = 3600 + Math.floor(Math.random() * 360);
-    wheel.style.transform = `rotate(${randomSpin}deg)`;
+    const spin = 3000 + Math.random() * 2000;
+    const duration = 5000;
+    const start = performance.now();
 
-    setTimeout(() => {
-        const finalDeg = randomSpin % 360;
-        const index = Math.floor((360 - finalDeg) / segAngle) % segments.length;
-        const result = segments[index];
-
-        // KONTROLA LIMITOV
-        if (limits[result] !== undefined) {
-            if (limits[result] > 0) {
-                limits[result]--;
-                document.getElementById("result").innerText = "Vyhrali ste: " + result;
-            } else {
-                document.getElementById("result").innerText = "Výhra už nie je dostupná";
-            }
+    function animate(now) {
+        const elapsed = now - start;
+        if (elapsed < duration) {
+            rotation = (spin * (1 - Math.pow(1 - elapsed / duration, 3))) % 360;
+            canvas.style.transform = `rotate(${rotation}deg)`;
+            requestAnimationFrame(animate);
         } else {
-            document.getElementById("result").innerText = result;
+            finishSpin(rotation);
         }
+    }
 
-        localStorage.setItem("played", "1");
-        spinning = false;
+    requestAnimationFrame(animate);
+}
 
-    }, 5200);
+function finishSpin(deg) {
+    const index = Math.floor(((360 - deg + 18) % 360) / (360 / segments.length));
+    const landed = segments[index];
+
+    let resultText = landed;
+
+    if (prizeMapping[landed]) {
+        const prize = prizeMapping[landed];
+
+        if (limits[prize] > 0) {
+            limits[prize]--;
+            resultText = "Vyhrali ste: " + prize;
+        } else {
+            resultText = "Táto výhra už nie je dostupná";
+        }
+    }
+
+    document.getElementById("result").innerText = resultText;
+    localStorage.setItem("played", "1");
+    spinning = false;
 }
 </script>
 
